@@ -9,7 +9,6 @@ library(piecewiseSEM)
 library(stringr)
 
 ###################################
-setwd("C:/周礼斌/Data Collection/Data preserve/River for 2km/Manipulated_Data")
 
 DD_results <- read.csv(file.choose(), check.names = F) #s3r
 DD_temp <- read.csv("DD_temp.csv", check.names = F)
