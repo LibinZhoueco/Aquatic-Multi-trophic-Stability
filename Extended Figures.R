@@ -1,15 +1,11 @@
+###########################
+rm(list = ls())
+
 library(ggplot2)
 library(patchwork)
 library(cowplot)
 library(r2glmm)
 library(ppcor)
-
-#########
-DD_results <- read.csv("Results_Genus(remove2023Tai)@3years_PredatorRemoval.csv", check.names = F) 
-DD_producer <- DD_results[DD_results$FunGroup == "Producer",]
-DD_consumer <- DD_results[DD_results$FunGroup == "Consumer",]
-
-DD_log <- read.csv("DD_log.csv", check.names = F) 
 
 ########################### Sensitivity analysis for datasets with  minimum of 5 years
 DD_log_sensitive <- DD_log %>%
@@ -21,7 +17,7 @@ DD_producer_sensitive <- DD_results_sensitive[DD_results_sensitive$FunGroup == "
 DD_consumer_sensitive <- DD_results_sensitive[DD_results_sensitive$FunGroup == "Consumer",]
 
 ############For bottom-up processes
-full_cons_sensitive <- lmer(cons_comsta ~ cons_simpson + prod_simpson + sd_temp.y + tmp + (1|habitat_type), data = DD_log_sensitive)
+full_cons_sensitive <- lmer(cons_comsta ~ cons_simpson + prod_simpson + sd_temp + tmp + (1|habitat_type), data = DD_log_sensitive)
 summary(full_cons_sensitive)
 anova(full_cons_sensitive)
 r2beta(full_cons_sensitive, partial = TRUE, method = "nsj")
@@ -29,11 +25,11 @@ r2beta(full_cons_sensitive, partial = TRUE, method = "nsj")
 coef_bottomup_sen <- data.frame(
   cons_simpson = mean(DD_log_sensitive$cons_simpson), 
   prod_simpson = seq(min(DD_log_sensitive$prod_simpson), max(DD_log_sensitive$prod_simpson), length.out = 98),
-  sd_temp.y = mean(DD_log_sensitive$sd_temp.y, na.rm = T),
+  sd_temp = mean(DD_log_sensitive$sd_temp, na.rm = T),
   tmp = mean(DD_log_sensitive$tmp)
 )
 
-X_bottomup_sen <- model.matrix(~  cons_simpson + prod_simpson + sd_temp.y + tmp, data = coef_bottomup_sen)
+X_bottomup_sen <- model.matrix(~  cons_simpson + prod_simpson + sd_temp + tmp, data = coef_bottomup_sen)
 prod_bottomup_sen <- predict(full_cons_sensitive, newdata = coef_bottomup_sen, re.form = NA)
 
 vcov_matrix <- vcov(full_cons_sensitive, useScale = FALSE)  #
@@ -59,7 +55,7 @@ for(habitat in habitat_types) {
                        max(habitat_data$prod_simpson, na.rm = TRUE), 
                        length.out = 100),
     cons_simpson = mean(habitat_data$cons_simpson, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -97,10 +93,10 @@ DSR_bottomup_sen
 coef_cons_sen <- data.frame(
   prod_simpson = mean(DD_log_sensitive$prod_simpson), 
   cons_simpson = seq(min(DD_log_sensitive$cons_simpson), max(DD_log_sensitive$cons_simpson), length.out = 98),
-  sd_temp.y = mean(DD_log_sensitive$sd_temp.y, na.rm = T),
+  sd_temp = mean(DD_log_sensitive$sd_temp, na.rm = T),
   tmp = mean(DD_log_sensitive$tmp)
 )
-X_cons_sen <- model.matrix(~ cons_simpson + prod_simpson + tmp +  sd_temp.y, data = coef_bottomup_sen)
+X_cons_sen <- model.matrix(~ cons_simpson + prod_simpson + tmp +  sd_temp, data = coef_bottomup_sen)
 pred_cons_sen <- predict(full_cons_sensitive, newdata = coef_cons_sen, re.form = NA)
 
 vcov_matrix <- vcov(full_cons_sensitive, useScale = FALSE)
@@ -126,7 +122,7 @@ for(habitat in habitat_types) {
                        max(habitat_data$cons_simpson, na.rm = TRUE), 
                        length.out = 100),
     prod_simpson = mean(habitat_data$prod_simpson, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -163,7 +159,7 @@ DSR_cons_sen
 
 #### Producer stability as responses to consumer and producer diversity
 options(na.action = "na.fail")
-full_prod_sensitive <- lmer(prod_comsta ~  prod_simpson+ cons_simpson + tmp + sd_temp.y + (1|habitat_type), data = DD_log_sensitive)
+full_prod_sensitive <- lmer(prod_comsta ~  prod_simpson+ cons_simpson + tmp + sd_temp + (1|habitat_type), data = DD_log_sensitive)
 summary(full_prod_sensitive)
 anova(full_prod_sensitive)
 r2beta(full_prod_sensitive, partial = TRUE, method = "nsj")
@@ -172,10 +168,10 @@ r2beta(full_prod_sensitive, partial = TRUE, method = "nsj")
 coef_topdown_sen <- data.frame(
   prod_simpson = mean(DD_log_sensitive$prod_simpson),  
   cons_simpson = seq(min(DD_log_sensitive$cons_simpson), max(DD_log_sensitive$cons_simpson), length.out = 98),
-  sd_temp.y = mean(DD_log_sensitive$sd_temp.y, na.rm = T),
+  sd_temp = mean(DD_log_sensitive$sd_temp, na.rm = T),
   tmp = mean(DD_log_sensitive$tmp)
 )
-X_topdown_sen <- model.matrix(~ cons_simpson + prod_simpson  + tmp + sd_temp.y, data = coef_topdown_sen)
+X_topdown_sen <- model.matrix(~ cons_simpson + prod_simpson  + tmp + sd_temp, data = coef_topdown_sen)
 pred_topdown_sen <- predict(full_prod_sensitive, newdata = coef_topdown_sen, re.form = NA)
 
 vcov_matrix <- vcov(full_prod_sensitive, useScale = FALSE)
@@ -203,7 +199,7 @@ for(habitat in habitat_types) {
                        max(habitat_data$cons_simpson, na.rm = TRUE), 
                        length.out = 100),
     prod_simpson = mean(habitat_data$prod_simpson, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -241,10 +237,10 @@ DSR_topdown_sen
 coef_prod <- data.frame(
   cons_simpson = mean(DD_log$cons_simpson), 
   prod_simpson = seq(min(DD_log$prod_simpson), max(DD_log$prod_simpson), length.out = 98),
-  sd_temp.y = mean(DD_log$sd_temp.y, na.rm = T),
+  sd_temp = mean(DD_log$sd_temp, na.rm = T),
   tmp = mean(DD_log$tmp)
 )
-X_prod <- model.matrix(~ cons_simpson + prod_simpson + tmp + sd_temp.y, data = coef_prod)
+X_prod <- model.matrix(~ cons_simpson + prod_simpson + tmp + sd_temp, data = coef_prod)
 pred_prod <- predict(full_prod, newdata = coef_prod, re.form = NA)
 
 vcov_matrix <- vcov(full_prod_sensitive, useScale = FALSE)  #
@@ -270,7 +266,7 @@ for(habitat in habitat_types) {
                        max(habitat_data$prod_simpson, na.rm = TRUE), 
                        length.out = 100),
     cons_simpson = mean(habitat_data$cons_simpson, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -342,10 +338,9 @@ Extended_Figure_2 <- cowplot::plot_grid(
 )
 Extended_Figure_2
 
-
 ######### Check the relationship between Simpson and richness (without rare species) and community stability
 #### Shannon index
-full_cons_shannon<- lmer(cons_comsta ~  prod_shannon + cons_shannon +  sd_temp.y + tmp + (1|habitat_type), data = DD_log)
+full_cons_shannon<- lmer(cons_comsta ~  prod_shannon + cons_shannon +  sd_temp + tmp + (1|habitat_type), data = DD_log)
 summary(full_cons_shannon)
 anova(full_cons_shannon)
 r2beta(full_cons_shannon, partial = TRUE, method = "nsj")
@@ -354,10 +349,10 @@ r2beta(full_cons_shannon, partial = TRUE, method = "nsj")
 coef_bottomup_shannon <- data.frame(
   cons_shannon = mean(DD_log$cons_shannon), 
   prod_shannon = seq(min(DD_log$prod_shannon), max(DD_log$prod_shannon), length.out = 98),
-  sd_temp.y = mean(DD_log$sd_temp.y, na.rm = T),
+  sd_temp = mean(DD_log$sd_temp, na.rm = T),
   tmp = mean(DD_log$tmp)
 )
-X_bottomup_shannon <- model.matrix(~ prod_shannon + cons_shannon + sd_temp.y + tmp , data = coef_bottomup_shannon)
+X_bottomup_shannon <- model.matrix(~ prod_shannon + cons_shannon + sd_temp + tmp , data = coef_bottomup_shannon)
 prod_bottomup_shannon <- predict(full_cons_shannon, newdata = coef_bottomup_shannon, re.form = NA)
 
 vcov_matrix <- vcov(full_cons_shannon, useScale = FALSE)  #
@@ -383,7 +378,7 @@ for(habitat in habitat_types) {
                        max(habitat_data$prod_shannon, na.rm = TRUE), 
                        length.out = 100),
     cons_shannon = mean(habitat_data$cons_shannon, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -401,7 +396,7 @@ DSR_bottomup_shannon <- ggplot() +
             mapping = aes(x = prod_shannon, y = fit, color = habitat_type), 
             linewidth = 1.0) +
   geom_smooth(data= result_bottomup_shannon, mapping = aes(x =  prod_shannon, y = fit,color = FunGroup), 
-              method = "lm", linetype = "solid", color = "black", linewidth = 2, se = T) +
+              method = "lm", linetype = "dashed", color = "black", linewidth = 2, se = T) +
   geom_ribbon(data= result_bottomup_shannon, mapping = aes(x = prod_shannon, ymin = lwr, ymax = upr), alpha = 0.1) +
   labs(x = "Producer diversity", y = "Ln (Consumer community stability)", color = "Habitat type") + 
   guides(fill = "none") + 
@@ -420,10 +415,10 @@ DSR_bottomup_shannon
 coef_cons_shannon <- data.frame(
   prod_shannon = mean(DD_log$prod_shannon), 
   cons_shannon = seq(min(DD_log$cons_shannon), max(DD_log$cons_shannon), length.out = 98),
-  sd_temp.y = mean(DD_log$sd_temp.y, na.rm = T),
+  sd_temp = mean(DD_log$sd_temp, na.rm = T),
   tmp = mean(DD_log$tmp)
 )
-X_cons_shannon <- model.matrix(~ cons_shannon + prod_shannon + tmp +  sd_temp.y, data = coef_bottomup_shannon)
+X_cons_shannon <- model.matrix(~ cons_shannon + prod_shannon + tmp +  sd_temp, data = coef_bottomup_shannon)
 pred_cons_shannon <- predict(full_cons_shannon, newdata = coef_cons_shannon, re.form = NA)
 
 vcov_matrix <- vcov(full_cons_shannon, useScale = FALSE)
@@ -451,7 +446,7 @@ for(habitat in habitat_types) {
                        max(habitat_data$cons_shannon, na.rm = TRUE), 
                        length.out = 100),
     prod_shannon = mean(habitat_data$prod_shannon, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -486,21 +481,20 @@ DSR_cons_shannon
 
 ###
 options(na.action = "na.fail")
-full_prod_shannon <- lmer(prod_comsta ~  prod_shannon+ cons_shannon + tmp + sd_temp.y + (1|habitat_type), data = DD_log)
+full_prod_shannon <- lmer(prod_comsta ~  prod_shannon+ cons_shannon + tmp + sd_temp + (1|habitat_type), data = DD_log)
 summary(full_prod_shannon)
 anova(full_prod_shannon)
 r2beta(full_prod_shannon, partial = TRUE, method = "nsj")
-
 
 ### Producer stability as response to consumer diversity 
 coef_topdown_shannon <- data.frame(
   prod_shannon = mean(DD_log$prod_shannon),  
   cons_shannon = seq(min(DD_log$cons_shannon), max(DD_log$cons_shannon), length.out = 98),
-  sd_temp.y = mean(DD_log$sd_temp.y, na.rm = T),
+  sd_temp = mean(DD_log$sd_temp, na.rm = T),
   tmp = mean(DD_log$tmp)
 )
 
-X_topdown_shannon <- model.matrix(~ cons_shannon + prod_shannon  + tmp + sd_temp.y, data = coef_topdown_shannon)
+X_topdown_shannon <- model.matrix(~ cons_shannon + prod_shannon  + tmp + sd_temp, data = coef_topdown_shannon)
 pred_topdown_shannon <- predict(full_prod_shannon, newdata = coef_topdown_shannon, re.form = NA)
 
 vcov_matrix <- vcov(full_prod_shannon, useScale = FALSE)  #
@@ -526,7 +520,7 @@ for(habitat in habitat_types) {
                        max(habitat_data$cons_shannon, na.rm = TRUE), 
                        length.out = 100),
     prod_shannon = mean(habitat_data$prod_shannon, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -563,11 +557,11 @@ DSR_topdown_shannon
 coef_prod_shannon <- data.frame(
   cons_shannon = mean(DD_log$cons_shannon), 
   prod_shannon = seq(min(DD_log$prod_shannon), max(DD_log$prod_shannon), length.out = 98),
-  sd_temp.y = mean(DD_log$sd_temp.y, na.rm = T),
+  sd_temp = mean(DD_log$sd_temp, na.rm = T),
   tmp = mean(DD_log$tmp)
 )
 
-X_prod_shannon <- model.matrix(~ cons_shannon + prod_shannon + tmp + sd_temp.y, data = coef_prod_shannon)
+X_prod_shannon <- model.matrix(~ cons_shannon + prod_shannon + tmp + sd_temp, data = coef_prod_shannon)
 pred_prod_shannon <- predict(full_prod_shannon, newdata = coef_prod_shannon, re.form = NA)
 
 vcov_matrix <- vcov(full_prod_shannon, useScale = FALSE)  #
@@ -594,7 +588,7 @@ for(habitat in habitat_types) {
                        max(habitat_data$prod_shannon, na.rm = TRUE), 
                        length.out = 100),
     cons_shannon = mean(habitat_data$cons_shannon, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -666,24 +660,22 @@ Extended_Figure_3 <- cowplot::plot_grid(
 )
 Extended_Figure_3
 
-####### Relationship between richness (without rare species) and community stability
+################## Relationship between richness (without rare species) and community stability
 #### Consumer stability as responses to producer diversity
-DD_log_rareRemoval <- read.csv("DD_log(withoutRareSpecies0.1%)_0707.csv", check.names = F) 
-
-full_cons_richness <- lmer(cons_comsta ~  log(prod_richness) + log(cons_richness) + sd_temp.y + tmp + 
-                             (1|habitat_type), data = DD_log_rareRemoval)
+full_cons_richness <- lmer(cons_comsta ~  prod_richness + cons_richness + sd_temp + tmp + 
+                             (1|habitat_type), data = DD_log_norare)
 summary(full_cons_richness)
 anova(full_cons_richness)
 r2beta(full_cons_richness, partial = TRUE, method = "nsj")
 
 ####### Consumer stability as response to producer diversity 
 coef_bottomup_richness <- data.frame(
-  cons_richness = mean(DD_log_rareRemoval$cons_richness), 
-  prod_richness = seq(min(DD_log_rareRemoval$prod_richness), max(DD_log_rareRemoval$prod_richness), length.out = 98),
-  sd_temp.y = mean(DD_log_rareRemoval$sd_temp.y, na.rm = T),
-  tmp = mean(DD_log_rareRemoval$tmp)
+  cons_richness = mean(DD_log_norare$cons_richness), 
+  prod_richness = seq(min(DD_log_norare$prod_richness), max(DD_log_norare$prod_richness), length.out = 98),
+  sd_temp = mean(DD_log_norare$sd_temp, na.rm = T),
+  tmp = mean(DD_log_norare$tmp)
 )
-X_bottomup_richness <- model.matrix(~ log(prod_richness) + log(cons_richness) + sd_temp.y + tmp, data = coef_bottomup_richness)
+X_bottomup_richness <- model.matrix(~ prod_richness + cons_richness + sd_temp + tmp, data = coef_bottomup_richness)
 prod_bottomup_richness <- predict(full_cons_richness, newdata = coef_bottomup_richness, re.form = NA)
 
 vcov_matrix <- vcov(full_cons_richness, useScale = FALSE)  #
@@ -703,13 +695,13 @@ result_bottomup_richness <- cbind(coef_bottomup_richness, bottomup_int_richness)
 habitat_types <- unique(DD_log$habitat_type)
 pred_bottomup_richness_list <- list()
 for(habitat in habitat_types) {
-  habitat_data <- DD_log_rareRemoval[DD_log_rareRemoval$habitat_type == habitat,]
+  habitat_data <- DD_log_norare[DD_log_norare$habitat_type == habitat,]
   new_data <- data.frame(
     prod_richness = seq(min((habitat_data$prod_richness), na.rm = TRUE), 
                         max((habitat_data$prod_richness), na.rm = TRUE), 
                         length.out = 100),
     cons_richness = mean((habitat_data$cons_richness), na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -720,14 +712,14 @@ pred_bottomup_richness_facet_1 <- do.call(rbind, pred_bottomup_richness_list)
 
 ### Draw the graph
 DSR_bottomup_richness <- ggplot() +
-  geom_point(data = DD_log_rareRemoval, mapping = aes(x = log(prod_richness), y = (cons_comsta), color = habitat_type), 
+  geom_point(data = DD_log_norare, mapping = aes(x = prod_richness, y = cons_comsta, color = habitat_type), 
              size = 10, alpha = 0.3) +
   geom_line(data = pred_bottomup_richness_facet_1, 
-            mapping = aes(x = log(prod_richness), y = fit, color = habitat_type), 
+            mapping = aes(x = prod_richness, y = fit, color = habitat_type), 
             linewidth = 1.0) +
-  geom_smooth(data= result_bottomup_richness, mapping = aes(x =  log(prod_richness), y = fit,color = FunGroup), 
+  geom_smooth(data= result_bottomup_richness, mapping = aes(x =  prod_richness, y = fit,color = FunGroup), 
              method = "lm", linetype = "solid", color = "black", linewidth = 1.5, se = T) +
-  geom_ribbon(data= result_bottomup_richness, mapping = aes(x = log(prod_richness), ymin = lwr, ymax = upr), alpha = 0.2) +
+  geom_ribbon(data= result_bottomup_richness, mapping = aes(x = prod_richness, ymin = lwr, ymax = upr), alpha = 0.2) +
   labs(x = "Producer diversity", y = "Ln (Consumer community stability)", color = "Habitat type") + 
   guides(fill = "none") + 
   annotate("text", x = 0.2, y = max(log(DD_consumer$com_sta), na.rm = TRUE), 
@@ -736,19 +728,20 @@ DSR_bottomup_richness <- ggplot() +
   annotate("text", x = 0.2, y = max(log(DD_consumer$com_sta), na.rm = TRUE) - 0.12, 
            label = expression(italic(R)^2~"= 0.085"), 
            parse = TRUE, hjust = 0, vjust = 1, size = 6) +
-  my_scales + my_theme 
+  my_scales + 
+  my_theme 
 DSR_bottomup_richness <- ggdraw(DSR_bottomup_richness) + 
   draw_label("c",  x = 0, y = 1.01, hjust = -0.5, vjust = 1.5, size = 30, fontface = "bold")
 DSR_bottomup_richness
 
 ####### Consumer stability as response to consumer diversity 
 coef_cons_richness <- data.frame(
-  prod_richness = mean(DD_log_rareRemoval$prod_richness),  # 添加这一行
-  cons_richness = seq(min(DD_log_rareRemoval$cons_richness), max(DD_log_rareRemoval$cons_richness), length.out = 98),
-  sd_temp.y = mean(DD_log_rareRemoval$sd_temp.y, na.rm = T),
-  tmp = mean(DD_log_rareRemoval$tmp)
+  prod_richness = mean(DD_log_norare$prod_richness),  # 添加这一行
+  cons_richness = seq(min(DD_log_norare$cons_richness), max(DD_log_norare$cons_richness), length.out = 98),
+  sd_temp = mean(DD_log_norare$sd_temp, na.rm = T),
+  tmp = mean(DD_log_norare$tmp)
 )
-X_cons_richness <- model.matrix(~ log(cons_richness) + log(prod_richness) + tmp +  sd_temp.y, data = coef_bottomup_richness)
+X_cons_richness <- model.matrix(~ cons_richness + prod_richness + tmp +  sd_temp, data = coef_bottomup_richness)
 pred_cons_richness <- predict(full_cons_richness, newdata = coef_cons_richness, re.form = NA)
 
 vcov_matrix <- vcov(full_cons_richness, useScale = FALSE)  #
@@ -765,16 +758,16 @@ cons_int_richness <- data.frame(
 )
 result_cons_richness <- cbind(coef_cons_richness, cons_int_richness)
 
-habitat_types <- unique(DD_log_rareRemoval$habitat_type)
+habitat_types <- unique(DD_log_norare$habitat_type)
 pred_cons_richness_list <- list()
 for(habitat in habitat_types) {
-  habitat_data <- DD_log_rareRemoval[DD_log_rareRemoval$habitat_type == habitat,]
+  habitat_data <- DD_log_norare[DD_log_norare$habitat_type == habitat,]
   new_data <- data.frame(
     cons_richness = seq(min(habitat_data$cons_richness, na.rm = TRUE), 
                         max(habitat_data$cons_richness, na.rm = TRUE), 
                         length.out = 100),
     prod_richness = mean(habitat_data$prod_richness, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -785,16 +778,16 @@ pred_cons_richness_facet_1 <- do.call(rbind, pred_cons_richness_list)
 
 ### Draw the graph
 DSR_cons_richness <- ggplot() +
-  geom_point(data = DD_log_rareRemoval, mapping = aes(x = log(cons_richness), y = (cons_comsta),  color = habitat_type), 
+  geom_point(data = DD_log_norare, mapping = aes(x = cons_richness, y = (cons_comsta),  color = habitat_type), 
              size = 10, alpha = 0.3) +
-  #geom_smooth(data= DD_log_rareRemoval, mapping = aes(x = log(cons_richness), y = (cons_comsta),color = habitat_type), 
+  #geom_smooth(data= DD_log_norare, mapping = aes(x = cons_richness, y = (cons_comsta),color = habitat_type), 
    #          method = "lm", linetype = "solid",  linewidth = 0.8, se = F) +
   geom_line(data = pred_cons_richness_facet_1, 
-            mapping = aes(x = log(cons_richness), y = fit, color = habitat_type), 
+            mapping = aes(x = cons_richness, y = fit, color = habitat_type), 
             linewidth = 1.0) +
-  geom_smooth(data= result_cons_richness, mapping = aes(x =  log(cons_richness), y = fit,color = FunGroup), 
+  geom_smooth(data= result_cons_richness, mapping = aes(x =  cons_richness, y = fit,color = FunGroup), 
              method = "lm", linetype = "solid", color = "black", linewidth = 2, se = T) +
-  geom_ribbon(data= result_cons_richness, mapping = aes(x = log(cons_richness), ymin = lwr, ymax = upr),  alpha = 0.1) +
+  geom_ribbon(data= result_cons_richness, mapping = aes(x = cons_richness, ymin = lwr, ymax = upr),  alpha = 0.1) +
   labs(x = "Consumer diversity", y = "Ln (Consumer community stability)", color = "Trophic level", shape = "Site type") + 
   guides(fill = "none") + 
   annotate("text", x = 0.2, y = max(log(DD_consumer$com_sta), na.rm = TRUE), 
@@ -811,18 +804,18 @@ DSR_cons_richness
 
 ### Producer stability as response to producer and consumer diversity
 options(na.action = "na.fail")
-full_prod_richness <- lmer(prod_comsta ~  log(cons_richness) + log(prod_richness) +  tmp + sd_temp.y + (1|habitat_type), data = DD_log_rareRemoval)
+full_prod_richness <- lmer(prod_comsta ~  cons_richness + prod_richness +  tmp + sd_temp + (1|habitat_type), data = DD_log_norare)
 summary(full_prod_richness)
 anova(full_prod_richness)
 r2beta(full_prod_richness, partial = TRUE, method = "nsj")
 
 coef_topdown_richness <- data.frame(
-  prod_richness = mean(DD_log_rareRemoval$prod_richness),  
-  cons_richness = seq(min(DD_log_rareRemoval$cons_richness), max(DD_log_rareRemoval$cons_richness), length.out = 98),
-  sd_temp.y = mean(DD_log_rareRemoval$sd_temp.y, na.rm = T),
-  tmp = mean(DD_log_rareRemoval$tmp)
+  prod_richness = mean(DD_log_norare$prod_richness),  
+  cons_richness = seq(min(DD_log_norare$cons_richness), max(DD_log_norare$cons_richness), length.out = 98),
+  sd_temp = mean(DD_log_norare$sd_temp, na.rm = T),
+  tmp = mean(DD_log_norare$tmp)
 )
-X_topdown_richness <- model.matrix(~ log(cons_richness) + log(prod_richness)  + tmp + sd_temp.y, data = coef_topdown_richness)
+X_topdown_richness <- model.matrix(~ cons_richness + prod_richness  + tmp + sd_temp, data = coef_topdown_richness)
 pred_topdown_richness <- predict(full_prod_richness, newdata = coef_topdown_richness, re.form = NA)
 
 vcov_matrix <- vcov(full_prod_richness, useScale = FALSE) 
@@ -839,16 +832,16 @@ topdown_int_richness <- data.frame(
 )
 result_topdown_richness <- cbind(coef_topdown_richness, topdown_int_richness)
 
-habitat_types <- unique(DD_log_rareRemoval$habitat_type)
+habitat_types <- unique(DD_log_norare$habitat_type)
 pred_topdown_richness_list <- list()
 for(habitat in habitat_types) {
-  habitat_data <- DD_log_rareRemoval[DD_log_rareRemoval$habitat_type == habitat,]
+  habitat_data <- DD_log_norare[DD_log_norare$habitat_type == habitat,]
   new_data <- data.frame(
     cons_richness = seq(min(habitat_data$cons_richness, na.rm = TRUE), 
                         max(habitat_data$cons_richness, na.rm = TRUE), 
                         length.out = 100),
     prod_richness = mean(habitat_data$prod_richness, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -859,14 +852,14 @@ pred_topdown_richness_facet <- do.call(rbind, pred_topdown_richness_list)
 
 ### Draw the graph
 DSR_topdown_richness <- ggplot() +
-  geom_point(data = DD_log_rareRemoval, mapping = aes(x = log(cons_richness), y = (prod_comsta),  color = habitat_type), 
+  geom_point(data = DD_log_norare, mapping = aes(x = cons_richness, y = (prod_comsta),  color = habitat_type), 
              size = 10, alpha = 0.3) +
   geom_line(data = pred_topdown_richness_facet, 
-            mapping = aes(x = log(cons_richness), y = fit, color = habitat_type), 
+            mapping = aes(x = cons_richness, y = fit, color = habitat_type), 
             linewidth = 1.0) +
-  geom_smooth(data= result_topdown_richness, mapping = aes(x = log(cons_richness), y = fit,color = FunGroup), 
+  geom_smooth(data= result_topdown_richness, mapping = aes(x = cons_richness, y = fit,color = FunGroup), 
              method = "lm", linetype = "solid", color = "black", linewidth = 1.5, se = T) +
-  geom_ribbon(data= result_topdown_richness, mapping = aes(x = log(cons_richness), ymin = lwr, ymax = upr), alpha = 0.2) +
+  geom_ribbon(data= result_topdown_richness, mapping = aes(x = cons_richness, ymin = lwr, ymax = upr), alpha = 0.2) +
   labs(x = "Comsumer diversity", y = "Ln (Producer community stability)", color = "Habitat type") + 
   #scale_x_continuous(limits = c(0.2, 1), breaks = seq(0.2, 1, 0.2)) +
   #scale_y_continuous(limits = c(-0.8, 1), breaks = seq(-0.8, 1, 0.5)) +
@@ -885,13 +878,13 @@ DSR_topdown_richness
 
 ####### Producer stability as response to producer diversity 
 coef_prod_richness <- data.frame(
-  cons_richness = mean(DD_log_rareRemoval$cons_richness), 
-  prod_richness = seq(min(DD_log_rareRemoval$prod_richness), max(DD_log_rareRemoval$prod_richness), length.out = 98),
-  sd_temp.y = mean(DD_log_rareRemoval$sd_temp.y, na.rm = T),
-  y_length = mean(DD_log_rareRemoval$y_length),
-  tmp = mean(DD_log_rareRemoval$tmp)
+  cons_richness = mean(DD_log_norare$cons_richness), 
+  prod_richness = seq(min(DD_log_norare$prod_richness), max(DD_log_norare$prod_richness), length.out = 98),
+  sd_temp = mean(DD_log_norare$sd_temp, na.rm = T),
+  y_length = mean(DD_log_norare$y_length),
+  tmp = mean(DD_log_norare$tmp)
 )
-X_prod_richness <- model.matrix(~ log(cons_richness) + log(prod_richness) + tmp + sd_temp.y, data = coef_prod_richness)
+X_prod_richness <- model.matrix(~ cons_richness + prod_richness + tmp + sd_temp, data = coef_prod_richness)
 pred_prod_richness <- predict(full_prod_richness, newdata = coef_prod_richness, re.form = NA)
 
 vcov_matrix <- vcov(full_prod_richness, useScale = FALSE)  #
@@ -908,16 +901,16 @@ prod_int_richness <- data.frame(
 )
 result_prod_richness <- cbind(coef_prod_richness, prod_int_richness)
 
-habitat_types <- unique(DD_log_rareRemoval$habitat_type)
+habitat_types <- unique(DD_log_norare$habitat_type)
 pred_prod_richness_list <- list()
 for(habitat in habitat_types) {
-  habitat_data <- DD_log_rareRemoval[DD_log_rareRemoval$habitat_type == habitat,]
+  habitat_data <- DD_log_norare[DD_log_norare$habitat_type == habitat,]
   new_data <- data.frame(
     prod_richness = seq(min(habitat_data$prod_richness, na.rm = TRUE), 
                         max(habitat_data$prod_richness, na.rm = TRUE), 
                         length.out = 100),
     cons_richness = mean(habitat_data$cons_richness, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -928,14 +921,14 @@ pred_prod_richness_facet_1 <- do.call(rbind, pred_prod_richness_list)
 
 ### Draw the graph
 DSR_prod_richness <- ggplot() +
-  geom_point(data = DD_log_rareRemoval, mapping = aes(x = log(prod_richness), y = (prod_comsta),  color = habitat_type), 
+  geom_point(data = DD_log_norare, mapping = aes(x = prod_richness, y = (prod_comsta),  color = habitat_type), 
              size = 10, alpha = 0.3) +
   geom_line(data = pred_prod_richness_facet_1, 
-            mapping = aes(x = log(prod_richness), y = fit, color = habitat_type), 
+            mapping = aes(x = prod_richness, y = fit, color = habitat_type), 
             linewidth = 1.0) +
-  geom_smooth(data= result_prod_richness, mapping = aes(x = log(prod_richness), y = fit,color = FunGroup), 
+  geom_smooth(data= result_prod_richness, mapping = aes(x = prod_richness, y = fit,color = FunGroup), 
               method = "lm", linetype = "solid", color = "black", linewidth = 1.5, se = T) +
-  geom_ribbon(data= result_prod_richness, mapping = aes(x = log(prod_richness), ymin = lwr, ymax = upr), alpha = 0.1) +
+  geom_ribbon(data= result_prod_richness, mapping = aes(x = prod_richness, ymin = lwr, ymax = upr), alpha = 0.1) +
   labs(x = "Producer diversity", y = "Ln (Producer community stability)", color = "Habitat type") + 
   guides(fill = "none") + 
   annotate("text", x = 0.2, y = max(log(DD_consumer$com_sta), na.rm = TRUE), 
@@ -955,8 +948,8 @@ DSR_richness
 
 legend_sen <- get_legend(
   ggplot() +
-    geom_point(data = DD_log_rareRemoval, 
-               mapping = aes(x = log(prod_richness), y = log(prod_comsta), color = habitat_type),
+    geom_point(data = DD_log_norare, 
+               mapping = aes(x = prod_richness, y = log(prod_comsta), color = habitat_type),
                size = 4) +
     scale_color_manual(
       breaks = c("Lentic", "Lotic", "Estuary", "Marine"),
@@ -995,7 +988,3 @@ Exteded_Figure_4 <- cowplot::plot_grid(
   axis = 'l'
 )
 Exteded_Figure_4
-
-
-
-
