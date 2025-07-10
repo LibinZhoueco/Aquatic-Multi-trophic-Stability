@@ -1,11 +1,14 @@
+###########################
+rm(list = ls())
+
 library(ggplot2)
 library(patchwork)
 library(cowplot)
 library(r2glmm)
 library(ppcor)
 
-
 DD_results <- read.csv("Results_Genus(remove2023Tai)@3years_PredatorRemoval.csv", check.names = F) 
+
 ###Preserve my theme
 my_theme <- theme_bw() +
   theme(panel.grid=element_blank(), 
@@ -17,6 +20,7 @@ my_theme <- theme_bw() +
 my_scales <- list(scale_color_manual(values = c("#4FC3F7","#006064","purple","blue")),
                   scale_fill_manual(values = c("#4FC3F7","#006064","purple","blue")))
 
+###### Community stability
 ### Averages
 DD_results$FunGroup <- factor(DD_results$FunGroup, levels = c("Producer", "Consumer"))
 TL_comsta <- ggplot() +
@@ -239,18 +243,13 @@ P_spephi <- ggdraw(TL_spephi) +
 P_spephi
 
 ######## Figure 2
-TL_DS_1 <-  P_comsta + P_spesta +  P_spephi
-TL_DS_1 
-
+Figure_2 <-  P_comsta + P_spesta +  P_spephi
+Figure_2
 
 ########################################################################################
 ### For consumer community stability
-DD_log <- read.csv("DD_log.csv", check.names = F) 
-DD_producer <- DD_results[DD_results$FunGroup == "Producer",]
-DD_consumer <- DD_results[DD_results$FunGroup == "Consumer",]
-
 options(na.action = "na.fail")
-full_cons <- lmer(cons_comsta ~  prod_simpson + cons_simpson + sd_temp.y + tmp
+full_cons <- lmer(cons_comsta ~  prod_simpson + cons_simpson + sd_temp + tmp
                   + (1|habitat_type), data = DD_log)
 
 summary(full_cons)
@@ -262,11 +261,11 @@ r2beta(full_cons, partial = TRUE, method = "nsj")
 coef_bottomup <- data.frame(
   cons_simpson = mean(DD_log$cons_simpson),  
   prod_simpson = seq(min(DD_log$prod_simpson), max(DD_log$prod_simpson), length.out = 98),
-  sd_temp.y = mean(DD_log$sd_temp.y, na.rm = T),
+  sd_temp = mean(DD_log$sd_temp, na.rm = T),
   tmp = mean(DD_log$tmp)
 )
 
-X_bottomup <- model.matrix(~ prod_simpson + cons_simpson + sd_temp.y + tmp, data = coef_bottomup)
+X_bottomup <- model.matrix(~ prod_simpson + cons_simpson + sd_temp + tmp, data = coef_bottomup)
 prod_bottomup <- predict(full_cons, newdata = coef_bottomup, re.form = NA)
 
 vcov_matrix <- vcov(full_cons, useScale = FALSE)
@@ -287,14 +286,13 @@ habitat_types <- unique(DD_log$habitat_type)
 pred_data_list <- list()
 
 for(habitat in habitat_types) {
-  
   habitat_data <- DD_log[DD_log$habitat_type == habitat,]
   new_data <- data.frame(
     prod_simpson = seq(min(habitat_data$prod_simpson, na.rm = TRUE), 
                        max(habitat_data$prod_simpson, na.rm = TRUE), 
                        length.out = 100),
     cons_simpson = mean(habitat_data$cons_simpson, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -335,11 +333,11 @@ DSR_bottomup
 coef_cons <- data.frame(
   prod_simpson = mean(DD_log$prod_simpson), 
   cons_simpson = seq(min(DD_log$cons_simpson), max(DD_log$cons_simpson), length.out = 98),
-  sd_temp.y = mean(DD_log$sd_temp.y, na.rm = T),
+  sd_temp = mean(DD_log$sd_temp, na.rm = T),
   tmp = mean(DD_log$tmp)
 )
 
-X_cons <- model.matrix(~ cons_simpson + prod_simpson + tmp +  sd_temp.y , data = coef_cons)
+X_cons <- model.matrix(~ cons_simpson + prod_simpson + tmp +  sd_temp , data = coef_cons)
 pred_cons <- predict(full_cons, newdata = coef_cons, re.form = NA)
 
 vcov_matrix <- vcov(full_cons, useScale = FALSE)  #
@@ -369,7 +367,7 @@ for(habitat in habitat_types) {
     new_data <- data.frame(
     cons_simpson = seq(habitat_min, habitat_max, length.out = 100),
     prod_simpson = mean(habitat_data$prod_simpson, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -377,7 +375,6 @@ for(habitat in habitat_types) {
   new_data$fit <- predict(full_cons, newdata = new_data)
   pred_cons_list[[habitat]] <- new_data
 }
-
 pred_cons_facet_1 <- do.call(rbind, pred_cons_list)
 
 ### Draw the graph
@@ -408,7 +405,7 @@ DSR_cons
 ########## Producer community stability as response to consumer and producer diversity
 ## Producer community stability in response to consumer simpson diversity
 options(na.action = "na.fail")
-full_prod <- lmer(prod_comsta ~  cons_simpson + prod_simpson+ tmp + sd_temp.y + 
+full_prod <- lmer(prod_comsta ~  cons_simpson + prod_simpson+ tmp + sd_temp + 
                     (1|habitat_type), data = DD_log)
 summary(full_prod)
 anova(full_prod)
@@ -418,11 +415,11 @@ r2beta(full_prod, partial = TRUE, method = "nsj")
 coef_topdown <- data.frame(
   prod_simpson = mean(DD_log$prod_simpson),  
   cons_simpson = seq(min(DD_log$cons_simpson), max(DD_log$cons_simpson), length.out = 98),
-  sd_temp.y = mean(DD_log$sd_temp.y, na.rm = T),
+  sd_temp = mean(DD_log$sd_temp, na.rm = T),
   tmp = mean(DD_log$tmp)
 )
 
-X_topdown <- model.matrix(~ cons_simpson + prod_simpson  + tmp + sd_temp.y, data = coef_topdown)
+X_topdown <- model.matrix(~ cons_simpson + prod_simpson  + tmp + sd_temp, data = coef_topdown)
 pred_topdown <- predict(full_prod, newdata = coef_topdown, re.form = NA)
 
 vcov_matrix <- vcov(full_prod, useScale = FALSE)  #
@@ -451,7 +448,7 @@ for(habitat in habitat_types) {
   new_data <- data.frame(
     cons_simpson = seq(habitat_min, habitat_max, length.out = 100),
     prod_simpson = mean(habitat_data$prod_simpson, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -490,10 +487,10 @@ DSR_topdown
 coef_prod <- data.frame(
   cons_simpson = mean(DD_log$cons_simpson), 
   prod_simpson = seq(min(DD_log$prod_simpson), max(DD_log$prod_simpson), length.out = 98),
-  sd_temp.y = mean(DD_log$sd_temp.y, na.rm = T),
+  sd_temp = mean(DD_log$sd_temp, na.rm = T),
   tmp = mean(DD_log$tmp)
 )
-X_prod <- model.matrix(~ cons_simpson + prod_simpson + tmp + sd_temp.y, data = coef_prod)
+X_prod <- model.matrix(~ cons_simpson + prod_simpson + tmp + sd_temp, data = coef_prod)
 pred_prod <- predict(full_prod, newdata = coef_prod, re.form = NA)
 se_prod <- sqrt(diag(X_prod %*% vcov(full_prod, useScale = FALSE) %*% t(X_prod)))
 
@@ -514,7 +511,7 @@ for(habitat in habitat_types) {
                        max(habitat_data$prod_simpson, na.rm = TRUE), 
                        length.out = 100),
     cons_simpson = mean(habitat_data$cons_simpson, na.rm = TRUE),
-    sd_temp.y = mean(habitat_data$sd_temp.y, na.rm = TRUE),
+    sd_temp = mean(habitat_data$sd_temp, na.rm = TRUE),
     tmp = mean(habitat_data$tmp, na.rm = TRUE),
     habitat_type = habitat
   )
@@ -587,5 +584,3 @@ Figure_3 <- cowplot::plot_grid(
   axis = 'l'
 )
 Figure_3
-
-
