@@ -10,9 +10,9 @@ library(stringr)
 ###################################
 DD_results <- read.csv("Multitrophic_Stability_Results.csv", check.names = F)
 
-############### Check for difference between two trophic levels
+############## Check for difference between two trophic levels
 DD_long <- DD_results %>%
-  pivot_longer(cols = c(spe_sta, com_sta, spe_phi, alpha_simpson), 
+  pivot_longer(cols = c(spe_sta, com_sta, spe_phi, alpha_richness), 
                names_to = "variable", values_to = "value")
 DD_wide <- DD_long %>%
   pivot_wider(id_cols = c(siteID, variable), 
@@ -28,7 +28,7 @@ logt.test_results <- DD_wide %>%
     p_value = map_dbl(t_test, ~.$p.value),
     mean_difference = map_dbl(t_test, ~.$estimate)
   ) %>%
-  select(-t_test)
+  dplyr::select(-t_test)
 print(logt.test_results)
 
 ################ Then we check bottom-up and top-down effects of diversity
@@ -57,50 +57,53 @@ DD_log[, cols_to_transform] <- lapply(DD_log[, cols_to_transform], function(x) {
 DD_log <- as.data.frame(DD_log)
 DD_log$habitat_type <- as.factor(DD_log$habitat_type)
 
-###### For cosumer community stability
+###### For cosumer community stability using log-transferred data
 options(na.action = "na.fail")
-full_cons <- lmer(cons_comsta ~ prod_simpson + cons_simpson + tmp + sd_temp
-                    + (1|habitat_type), data = DD_log)
+full_cons <- lmer(cons_comsta ~ prod_richness + cons_richness + tmp + sd_temp
+                  + (1|habitat_type), data = DD_log)
 summary(full_cons)
 anova(full_cons)
 
 ##### For producer commuity stability
-full_prod <- lmer(prod_comsta ~ prod_simpson + cons_simpson + tmp + sd_temp
-                    + (1|habitat_type), data = DD_log)
+full_prod <- lmer(prod_comsta ~ prod_richness + cons_richness + tmp + sd_temp
+                  + (1|habitat_type), data = DD_log)
 summary(full_prod)
 anova(full_prod)
+
 #############################################################################################
 ################ SEM model
 DD_sem_lmer <- psem(
   lm(cons_comsta ~  cons_spesta + cons_spephi, data = DD_log),
   lm(prod_comsta ~    prod_spesta  + prod_spephi, data = DD_log),
-  lmer(cons_spesta ~  cons_simpson + prod_simpson + sd_temp + (1|habitat_type), data = DD_log),
-  lmer(cons_spephi ~  cons_simpson + (1|habitat_type), data = DD_log),
-  lmer(prod_spesta ~   cons_simpson +  prod_simpson + (1|habitat_type), data = DD_log),
-  lmer(prod_spephi ~   prod_simpson + sd_temp +(1|habitat_type), data = DD_log),
+  lmer(cons_spesta ~  cons_richness + prod_richness + sd_temp + (1|habitat_type), data = DD_log),
+  lmer(cons_spephi ~  cons_richness + (1|habitat_type), data = DD_log),
+  lmer(prod_spesta ~  prod_richness + (1|habitat_type), data = DD_log),
+  lmer(prod_spephi ~  prod_richness + cons_richness + sd_temp +tmp +(1|habitat_type), data = DD_log),
   
-  cons_simpson %~~% prod_simpson, 
+  cons_richness %~~% prod_richness, 
   cons_comsta %~~% prod_comsta,
-  
-  data = DD_log   
+
+  data = DD_log 
 )
 dSep(DD_sem_lmer)
 summary(DD_sem_lmer)
-###################### Full models With Simpson diversity
+
+###################### Full models With Richness
 DD_sem_lmer_full <- psem(
   lm(cons_comsta ~  cons_spesta + cons_spephi, data = DD_log),
   lm(prod_comsta ~    prod_spesta  + prod_spephi, data = DD_log),
-  lmer(cons_spesta ~  cons_simpson + prod_simpson + tmp + sd_temp + (1|habitat_type), data = DD_log),
-  lmer(cons_spephi ~  cons_simpson + prod_simpson + tmp + sd_temp + (1|habitat_type), data = DD_log),
-  lmer(prod_spesta ~   cons_simpson + prod_simpson + tmp + sd_temp  + (1|habitat_type), data = DD_log),
-  lmer(prod_spephi ~  cons_simpson + prod_simpson + tmp + sd_temp + (1|habitat_type), data = DD_log),
+  lmer(cons_spesta ~  cons_richness + prod_richness + tmp + sd_temp + (1|habitat_type), data = DD_log),
+  lmer(cons_spephi ~  cons_richness + prod_richness + tmp + sd_temp + (1|habitat_type), data = DD_log),
+  lmer(prod_spesta ~   cons_richness + prod_richness + tmp + sd_temp  + (1|habitat_type), data = DD_log),
+  lmer(prod_spephi ~  cons_richness + prod_richness + tmp + sd_temp + (1|habitat_type), data = DD_log),
   
-  cons_simpson %~~% prod_simpson, 
+  cons_richness %~~% prod_richness, 
   cons_comsta %~~% prod_comsta,
-  prod_spephi %~~% prod_spesta,
-  cons_spephi %~~% cons_spesta,
+  #prod_spephi %~~% prod_spesta,
+  #cons_spephi %~~% cons_spesta,
   
   data = DD_log 
 )
 dSep(DD_sem_lmer_full)
 summary(DD_sem_lmer_full)
+
